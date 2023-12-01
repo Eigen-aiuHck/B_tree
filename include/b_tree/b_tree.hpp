@@ -65,42 +65,56 @@ private:
   value_type m_root;
 
 protected:
-public:
-  auto find(key_type const &keys, pointer current) noexcept
-      -> std::pair<pointer, bool> {
+  auto static nocheck_find(key_type const &keys, pointer current) noexcept
+      -> pointer {
     for (Key key : keys) {
       if (auto ite = current->leaf_value().find(key);
           ite == current->leaf_value().end()) {
-        return {nullptr, false};
+        return nullptr;
       } else {
         current = &(ite->second);
       }
     }
-    return {current, true};
-  }
-  auto find(key_type const &keys) noexcept -> std::pair<pointer, bool> {
-    return find(keys, &m_root);
+    return current;
   }
 
-  auto try_insert(key_type keys, value_type const value = value_type()) noexcept
-      -> std::pair<pointer, bool> {
+public:
+  auto static find(key_type const &keys, pointer current) noexcept -> pointer {
+    if (!current) {
+      return current;
+    }
+    return nocheck_find(keys, current);
+  }
+  auto find(key_type const &keys) noexcept -> pointer {
+    return nocheck_find(keys, &m_root);
+  }
+
+  auto try_insert(key_type keys, pointer current,
+                  value_type const value = value_type()) noexcept -> pointer {
     Key target = keys.back();
     keys.pop_back();
-    if (auto pair = find(keys); pair.second == true) {
-      auto inserted_pair = pair.first->leaf_value().try_emplace(target, value);
+    if (pointer buf_ptr = find(keys, current); buf_ptr) {
+      auto inserted_pair = buf_ptr->leaf_value().try_emplace(target, value);
       if (inserted_pair.second) {
-        return {&(inserted_pair.first->second), true};
+        return &(inserted_pair.first->second);
       }
     }
-    return {nullptr, false};
+    return nullptr;
+  }
+  auto try_insert(key_type keys, value_type const value = value_type()) noexcept
+      -> pointer {
+    return try_insert(keys, &m_root, value);
   }
 
-  auto try_erase(key_type keys) noexcept -> size_t {
+  auto erase(key_type keys, pointer current) noexcept -> size_t {
     Key target = keys.back();
     keys.pop_back();
-    if (auto pair = find(keys); pair.second == true) {
-      return pair.first->leaf_value().erase(target);
+    if (pointer buf_ptr = find(keys, current); buf_ptr) {
+      return buf_ptr->leaf_value().erase(target);
     }
     return 0;
+  }
+  auto erase(key_type keys) noexcept -> size_t {
+    return erase(keys, &m_root);
   }
 };
