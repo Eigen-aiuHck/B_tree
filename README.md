@@ -1,7 +1,7 @@
 # B_tree
 
 * c++ 20 ~
-* using stl container.
+* using std library.
   * vector.
   * pair
   * unordered_map
